@@ -1,0 +1,232 @@
+---
+title: "Exploring the BRFSS data"
+output:
+  html_document:
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+  pdf_document: default
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+```
+
+### Load data
+
+Make sure your data and R Markdown files are in the same directory. When loaded
+your data file will be called `brfss2013`. Delete this note when before you submit 
+your work. 
+
+```{r get_the_data}
+load("brfss2013.RData")
+```
+
+```{r}
+names(brfss2013)
+```
+
+
+
+* * *
+
+## Part 1: Data
+
+The following data is collected by the BRFSS in 2013, with the goal of knowing about some habits that people older or equal than 18 years, in 50 areas, had about some specific health practices and risk behaviors that are linked to chronic diseases. This data was taken by two ways:
+
+1.Telephone survey, where interviewers collect data from a randomly selected adult in a household.    
+
+2.And  the cellular telephone version of the BRFSS questionnaire, interviewers collect data from an adult who participates by using a cellular telephone and resides in a private residence or college housing.
+
+In this case It will be discussed the Generability of the analysis that will be made, due to the random sampling of the population who participated in the poll, without taking into account the bias because the voluntary response present in the second method of data recollection. So this is an observational study and its outcome could be generalizable, but no causality can be inferred of this.
+
+
+* * *
+
+## Part 2: Research questions
+
+**Research quesion 1:** 
+
+In the First part of the research will be focus on knowing how is related the general health of the sample depending on if they have access to doctors, maybe people who do not have money enough to visit a doctor take more care about themselves and healthier habits or in fact they are the most affected population in general conditions.
+
+
+**Research quesion 2:**
+
+In the Second part we will analise on average how many hours people sleep relying on how healthy are their feeding habits, taking by feeding habits just fruit and vegetables. It is of great own interest take a look if the healthy food and hours of sleep are related.
+
+
+**Research quesion 3:**
+
+In the last part of the research I will examine if People who have ever had a depressive disorder, sleep more hours on average and if they consider themselves in a good or a bad general health state. This last part could be the start of something deeper, commonly people with depressive disorder hide their problems sleeping more than a "normal" person.
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+**Research quesion 1:**
+
+Lets begin taking a look on the variables of interest.
+```{r 1}
+brfss2013 %>% 
+  select(genhlth, medcost) %>% 
+  str()
+```
+And removing Na data and people who have economically access to doctors:
+
+```{r medical_access}
+medical_access <- brfss2013 %>%
+  select(genhlth, medcost) %>% 
+  filter(!is.na(genhlth),!is.na(medcost),medcost == "Yes")
+  
+```
+
+```{r medical_group}
+medical_access %>% 
+  group_by(genhlth) %>%
+  summarise(count = n()) 
+ggplot(data.frame(medical_access), aes(x=genhlth)) +
+  geom_bar() +
+  labs(title="General Health for people who have economically access to doctors",
+         x="General Health", y="Number of People")
+```
+As We can see the distribution seems to be roughly normal(maybe a little left skewed), so, for people who have money to visit a doctor there is no a tendence in their general health, but at the moment we can not say anything about their habits.
+
+Now people who do not have economically access to doctors:
+
+```{r no_medical_access}
+no_medical_access <- brfss2013 %>%
+  select(genhlth, medcost) %>% 
+  filter(!is.na(genhlth),!is.na(medcost),medcost == "No")
+```
+
+```{r no_medical_group}
+no_medical_access %>% 
+  group_by(genhlth) %>%
+  summarise(count = n())
+ggplot(data.frame(no_medical_access), aes(x=genhlth)) +
+  geom_bar() + 
+  labs(title="General Health for people who do not have economically access to doctors",
+         x="General Health", y="Number of People")
+```
+And for people who do not have enough money the distribution is right skewed as we can see, in overall they have a good general health, we can not assert that the fact of not having enough money for visiting a doctor force them to have some better habits to preserve a good health state but could be a really good hypothesis.
+
+As conclusion, People who do not have enough money to visit a doctor have a better health state than people who have money.
+
+**Research quesion 2:**
+
+Lets start taking a look on the variables of interest.
+
+
+```{r 2}
+just_fruit <- brfss2013 %>%
+  select(sleptim1, X_frutsum, X_vegesum) %>% 
+  filter(!is.na(X_frutsum),!is.na(sleptim1),!is.na(X_vegesum))
+```
+
+
+```{r fruit}
+just_fruit %>% 
+  group_by(sleptim1) %>% 
+  summarise(Mean = mean(X_frutsum))
+```
+
+```{r vegetables}
+just_fruit %>% 
+  group_by(sleptim1) %>% 
+  summarise(Mean = mean(X_vegesum))
+```
+
+
+```{r vector_frutas}
+vector_frutas <- c(145.1, 130.8, 135.0, 135.5, 130.8, 133.0, 143.7, 144.1, 144.9, 135.0, 135.7, 129.4, 127.1, 127.2, 143.1, 135.4, 126.1, 129.9, 279.1, 119.6, 336.6, 199.8, 31.5, 200.4)
+
+vector_veg <- c(179.2, 164.6, 166.9, 176.7, 179.1, 184.4, 197.9, 195.3, 192.8, 172.9, 176.1, 159.3, 156.8, 162.6, 169.6, 163.2, 174.0, 148.8, 205.5, 152.9, 77, 167.7, 28.5, 211.5)
+
+vector_horas <- seq(from = 1, to = 24, length.out = 24)
+
+data <- data.frame(vector_horas, vector_frutas, vector_veg)
+```
+
+```{r graph_frutas}
+ggplot(data= data , aes(x = vector_horas , y = vector_frutas)) +
+  geom_point() + 
+  labs(title="Healthy Feeding Habits vs Number of sleep hours",
+         x="Number of sleep hours", y="Portions of Fruit eaten per day")
+```
+
+
+         
+```{r graph_vegetables}
+ggplot(data= data , aes(x = vector_horas , y = vector_veg)) +
+  geom_point() + 
+  labs(title="Healthy Feeding Habits vs Number of sleep hours",
+         x="Number of sleep hours", y="Portions of Vegetables eaten per day")
+```
+The graph above shows that in general before 18 hours there is no an specific trend, after that appears some outliers that create some uncertanity about the data recollected, there are some jumps very irregulars between every pair of following hours, therefore it will be useful look into this information, besides people who answered about the sleeping hours above 18 hours are roughly 1% of the total population and it does not sound believable that someone sleeps more than 18 hours, so We could exclude that data to conclude that there is no relation between the sleep hours and the feeding habits for people.
+
+
+
+
+**Research quesion 3:**
+
+Lets start spliting the data of interest, first, people who have ever had depression:
+
+```{r depression}
+depression <- brfss2013 %>%
+  select(addepev2,genhlth,sleptim1) %>% 
+  filter(!is.na(addepev2),!is.na(genhlth),!is.na(sleptim1), addepev2 == "Yes")
+```
+
+```{r depression_group}
+depression %>% 
+  group_by(genhlth) %>%
+  summarise(count = n())
+ggplot(data.frame(depression), aes(x=genhlth)) +
+  geom_bar() + 
+  labs(title="General Health for people who have ever suffered depression",
+         x="General Health", y="Number of People")
+```
+The chart above represents The General Health of people who have ever had depression, the distribution is roughly normal, so It looks that people with depression disorders on average consider themselves as healthy people, therefore it would be a boundary between mental health and physical state, and these disordes do not influence in every personal state of a person.
+
+```{r depression_mean}
+depression %>% 
+  group_by(genhlth) %>%
+  summarise(Mean = mean(sleptim1))
+```
+
+And looking the data general health vs sleep time, we can see that healthier people tend to sleep a little bit more, but between the boundaries of sleep time recommended, and people with not as good general state tend to sleep on average fewer hours ans this could be part of the reasons of their general health.
+
+
+Now, taking people who have never had this kind of disorder.
+
+```{r no_depression}
+no_depression <- brfss2013 %>%
+  select(addepev2,genhlth,sleptim1) %>% 
+  filter(!is.na(addepev2),!is.na(genhlth),!is.na(sleptim1), addepev2 == "No")
+```
+
+
+```{r no_depression_group}
+no_depression %>% 
+  group_by(genhlth) %>%
+  summarise(count = n())
+ggplot(data.frame(no_depression), aes(x=genhlth)) +
+  geom_bar() + 
+  labs(title="General Health for people who have never suffered depression",
+         x="General Health", y="Number of People")
+```
+This chart behave totally different to the previous one, the distribution is right skewed, and show that people without depression tend to sleep more hours that people with disorder depression, and this indicate that people with depression do not sleep more to hide this condition, they tend to sleep fewer due to the depression.
+
+```{r no_depression_mean}
+no_depression %>% 
+  group_by(genhlth) %>%
+  summarise(Mean = mean(sleptim1))
+```
+
+
+And the table show the mean of the data before, who is coherent to the information above, but here people with poor and fair general state are closer to the 7 hours recommended than people who have ever suffered depression.
